@@ -1,0 +1,48 @@
+# Uncomment this line to define a global platform for your project
+platform :ios, '13.0'
+
+ENV['COCOAPODS_DISABLE_STATS'] = 'true'
+
+use_frameworks! :linkage => :static
+
+project 'Runner', {
+  'Debug' => :debug,
+  'Profile' => :release,
+  'Release' => :release,
+}
+
+def flutter_root
+  generated_xcconfig = File.expand_path('../Flutter/Generated.xcconfig', __FILE__)
+  raise "#{generated_xcconfig} not found. Run `flutter pub get` first." unless File.exist?(generated_xcconfig)
+  File.foreach(generated_xcconfig) do |line|
+    return $1.strip if line =~ /^FLUTTER_ROOT=(.*)$/
+  end
+  raise "FLUTTER_ROOT not set in #{generated_xcconfig}"
+end
+
+require File.expand_path('packages/flutter_tools/bin/podhelper', flutter_root)
+
+flutter_ios_podfile_setup
+
+target 'Runner' do
+  flutter_install_all_ios_pods(File.dirname(File.realpath(__FILE__)))
+
+  target 'RunnerTests' do
+    inherit! :search_paths
+  end
+end
+
+# This block fixes simulator code signing issues for all pods and all build configs
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target)
+    target.build_configurations.each do |config|
+      # Disable code signing for simulator
+      if config.build_settings['SDKROOT'] =~ /iPhoneSimulator/
+        config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
+        config.build_settings['CODE_SIGNING_REQUIRED'] = 'NO'
+        config.build_settings['CODE_SIGN_IDENTITY'] = ''
+      end
+    end
+  end
+end
